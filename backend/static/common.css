@@ -1,0 +1,39 @@
+@page {
+  size: A4;
+  margin: 20mm;
+}
+
+body {
+  margin: 0;
+  background: #eee;
+  font-family: Arial, sans-serif;
+}
+
+/* ONE PAGE */
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 20mm;
+  box-sizing: border-box;
+  background: white;
+  margin: 0 auto 10mm auto;
+  page-break-after: always;
+}
+
+/* SECTION RULES */
+.section {
+  margin-bottom: 12px;
+}
+
+/* Section title should not be orphaned */
+.section h3 {
+  margin-bottom: 6px;
+  page-break-after: avoid;
+}
+
+/* Individual items must never split */
+.item {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  margin-bottom: 8px;
+}
