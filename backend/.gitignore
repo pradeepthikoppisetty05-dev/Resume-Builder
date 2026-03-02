@@ -16,3 +16,9 @@ node_modules/
 
 .env
 backend/.env
+
+database/import_onet.py
+import_onet.py
+
+*.xlsx
+/data/*.xlsx

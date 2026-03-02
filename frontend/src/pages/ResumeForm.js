@@ -67,6 +67,19 @@ function ResumeForm() {
 
   const saveTimeout = useRef(null);
 
+  const [suggestions, setSuggestions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [expSuggestions, setExpSuggestions] = useState({});
+  const [activeExpDropdown, setActiveExpDropdown] = useState(null);
+  const [suggestedSkills, setSuggestedSkills] = useState([]);
+  const [skillJobSearch, setSkillJobSearch] = useState("");
+  const [activeOnetCode, setActiveOnetCode] = useState(null);
+  const [skillOnetCode, setSkillOnetCode] = useState(null);
+  const [skillJobInput, setSkillJobInput] = useState("");
+  const [skillSuggestions, setSkillSuggestions] = useState([]);
+  const [showSkillDropdown, setShowSkillDropdown] = useState(false);
+
+
   const { id: routeId } = useParams();
   const [id, setId] = useState(routeId || null);
   const [variation, setVariation]= useState(0);
@@ -98,6 +111,28 @@ function ResumeForm() {
       ...prev,
       personal: { ...prev.personal, [name]: value }
     }));
+
+    if (name === "profession") {
+    if (value.length >= 2) {
+      fetchSuggestions(value);
+    } else {
+      setSuggestions([]);
+      setShowDropdown(false);
+    }
+  }
+  };
+  
+  const fetchSuggestions = async (query) => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/occupations/search?q=${query}`
+      );
+      const data = await res.json();
+      setSuggestions(data);
+      setShowDropdown(true);
+    } catch (err) {
+      console.error("Error fetching professions:", err);
+    }
   };
 
   const addWebsite = () => {
@@ -144,7 +179,30 @@ function ResumeForm() {
     const updated = formData.skills.filter((_, i) => i !== index);
     setFormData(prev => ({ ...prev, skills: updated }));
   };
+  
 
+
+  useEffect(() => {
+  if (!activeOnetCode) {
+    setSuggestedSkills([]);
+    return;
+  }
+
+  const fetchSkills = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/occupations/skills/${activeOnetCode}`
+      );
+
+      const data = await res.json();
+      setSuggestedSkills(data.map(item => item.technology));
+    } catch (err) {
+      console.error("Error fetching skills:", err);
+    }
+  };
+
+  fetchSkills();
+}, [activeOnetCode]);
 
   //  Education 
   const addEducation = () => {
@@ -197,6 +255,24 @@ function ResumeForm() {
     }));
   };
 
+  const fetchExperienceSuggestions = async (query, index) => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/occupations/search?q=${query}`
+      );
+      const data = await res.json();
+
+      setExpSuggestions(prev => ({
+        ...prev,
+        [index]: data
+      }));
+
+      setActiveExpDropdown(index);
+    } catch (err) {
+      console.error("Error fetching occupations:", err);
+    }
+  };
+
   const updateExperience = (index, field, value) => {
     setFormData(prev => {
       const updated = [...prev.experience];
@@ -206,13 +282,10 @@ function ResumeForm() {
         [field]: value
       };
 
-      // If user edits description manually,
-      // update originalDescription ONLY here
       if (field === "description") {
         updated[index].originalDescription = value;
       }
 
-      // Handle current job logic
       if (field === "current" && value === true) {
         updated[index].endMonth = "";
         updated[index].endYear = "";
@@ -560,6 +633,82 @@ function ResumeForm() {
       .catch(err => console.log(err));
   };
 
+
+  useEffect(() => {
+    if (!skillJobSearch) {
+      setActiveOnetCode(formData.personal?.onet_code || null);
+    }
+  }, [formData.personal?.onet_code]);
+
+  useEffect(() => {
+    if (!skillOnetCode) {
+      setSuggestedSkills([]);
+      return;
+    }
+
+    const fetchSkills = async () => {
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/occupations/skills/${skillOnetCode}`
+        );
+        const data = await res.json();
+        setSuggestedSkills(data.map(item => item.technology));
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchSkills();
+  }, [skillOnetCode]);
+
+
+  //----------
+  const handleSkillJobChange = async (value) => {
+    setSkillJobInput(value);
+    setSkillOnetCode(null);
+
+    if (value.length < 2) {
+      setSkillSuggestions([]);
+      setShowSkillDropdown(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/occupations/search?q=${value}`
+      );
+
+      const data = await res.json();
+      setSkillSuggestions(data);
+      setShowSkillDropdown(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSkillSelect = (occupation) => {
+  setSkillJobInput(occupation.title);
+  setSkillOnetCode(occupation.onet_code);
+  setShowSkillDropdown(false);
+};
+
+  useEffect(() => {
+  if (!skillOnetCode) return;
+
+  const fetchSkills = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/occupations/skills/${skillOnetCode}`
+      );
+      const data = await res.json();
+      setSuggestedSkills(data.map(item => item.technology));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  fetchSkills();
+}, [skillOnetCode]);
   // ─────────────────────────────────────────────────────────────────────
 
   return (
@@ -622,10 +771,36 @@ function ResumeForm() {
           </div>
           </div>
 
+          <div style={{ position: "relative" }}>
+
           <label htmlFor="profession">Profession</label>
           <input id="profession" type="text" name="profession" placeholder="Software Engineer" maxLength={40}
             value={formData.personal.profession} onChange={handlePersonalChange} />
 
+            {showDropdown && suggestions.length > 0 && (
+              <ul className="dropdown">
+                {suggestions.map((item, index) => (
+                  <li
+                    key={index}
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        personal: {
+                          ...prev.personal,
+                          profession: item.title,
+                          onet_code: item.onet_code  
+                        }
+                      }));
+
+                      setShowDropdown(false);
+                    }}
+                  >
+                    {item.title}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <div className="input-row">
             <div className="input-group">
           <label htmlFor="city">City</label> 
@@ -715,6 +890,10 @@ function ResumeForm() {
           <div className="form-card">
         <h2>Skills</h2>
 
+        <div className="skills-container">
+
+        <div className="skills-left">
+
         {formData.skills.map((skill, index) => (
           <div key={index} style={{ display: "flex", gap: "10px" }}>
             <input
@@ -730,9 +909,70 @@ function ResumeForm() {
 
         ))}
 
-        <button type="button" className="add-btn" onClick={addSkill}>+ Add Skill</button>
+         <button type="button" className="add-btn" onClick={addSkill}>+ Add Skill</button>
+        </div>
+         
+        <div className="skills-right">
+        
+          <>
+            <h4>
+              Suggested Skills for {formData.personal.profession}
+            </h4>
+            
+            <div className="occupation-wrapper">
+            <input
+              type="text"
+              placeholder="Enter job title (e.g., System Administrator)"
+              value={skillJobInput}
+              onChange={(e) => handleSkillJobChange(e.target.value)}
+              className="skill-search-input"
+            />
+             {showSkillDropdown && skillSuggestions.length > 0 && (
+                <div className="dropdown">
+                  {skillSuggestions.map((occ, index) => (
+                    <div
+                      key={index}
+                      className="dropdown-item"
+                      onClick={() => handleSkillSelect(occ)}
+                    >
+                      {occ.title}
+                    </div>
+                  ))}
+                </div>
+              )}
+              </div>
 
-    
+
+            <div className="skills" style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+              {suggestedSkills.map((skill, index) => {
+              const alreadyAdded = formData.skills.includes(skill);
+
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  className={`suggested-skill-btn ${alreadyAdded ? "added" : ""}`}
+                  disabled={alreadyAdded}
+                  onClick={() => {
+                    if (!alreadyAdded) {
+                      setFormData(prev => ({
+                        ...prev,
+                        skills: [...prev.skills, skill]
+                      }));
+                    }
+                  }}
+                >
+                  {alreadyAdded ? "✓ " : "+ "}
+                  {skill}
+                </button>
+              );
+            })}
+            </div>
+          </>
+       
+        </div>
+
+        </div>
         </div>
         </div>
         )}
@@ -807,11 +1047,38 @@ function ResumeForm() {
 
         {formData.experience.map((exp, index) => (
           <div key={index} >
+            <div style={{ position: "relative" }}>
 
             <label htmlFor={`experience-title-${index}`}>Job Title *</label>
             <input id={`experience-title-${index}`} type="text" placeholder="Software Engineer" maxLength={50} name="title"
-              value={exp.title} onChange={(e) => updateExperience(index, "title", e.target.value)} />
+              value={exp.title} onChange={(e) => {
+                const value = e.target.value;
+                updateExperience(index, "title", value);
 
+                if (value.length >= 2) {
+                  fetchExperienceSuggestions(value, index);
+                }
+              }}/>
+              {activeExpDropdown === index &&
+                expSuggestions[index] &&
+                expSuggestions[index].length > 0 && (
+                  <ul className="dropdown">
+                    {expSuggestions[index].map((item, i) => (
+                      <li
+                        key={i}
+                        onClick={() => {
+                          updateExperience(index, "title", item.title);
+                          updateExperience(index, "onet_code", item.onet_code);
+
+                          setActiveExpDropdown(null);
+                        }}
+                      >
+                        {item.title}
+                      </li>
+                    ))}
+                  </ul>
+              )} 
+            </div>
             <div className="input-row">
             <div className="input-group">
             <label htmlFor={`experience-employer-${index}`}>Employer *</label>

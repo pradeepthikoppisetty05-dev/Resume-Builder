@@ -680,19 +680,17 @@ label {
 }
 
 .gen-btn:hover {
-  /* Hover effect to make it stand out more */
+
   background: linear-gradient(45deg, #0056b3, #00aaff);
   box-shadow: 0 6px 20px rgba(0, 123, 255, 0.6);
-  transform: translateY(-2px); /* Slight lift effect */
+  transform: translateY(-2px); 
 }
 
 .gen-btn:active {
-  /* Click effect */
   transform: translateY(0);
   box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
 }
 
-/* Optional: Add a subtle animation to hint at AI activity */
 @keyframes pulse {
   0% {
     transform: scale(1);
@@ -710,4 +708,104 @@ label {
 
 .gen-btn.animate-pulse {
   animation: pulse 2s infinite;
+}
+.dropdown {
+  position: absolute;
+  width: 100%;
+  background: white;
+  border: 1px solid #ccc;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.dropdown li {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.dropdown li:hover {
+  background-color: #f2f2f2;
+}
+.skills-container {
+  display: flex;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.skills-left,
+.skills-right {
+  flex: 1;
+}
+
+.skill-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.suggested-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggested-skill-btn {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background: #f8f8f8;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 6px;
+  transition: 0.2s;
+}
+
+.suggested-skill-btn:hover {
+  background: #eaeaea;
+}
+
+.suggested-skill-btn.disabled {
+  background: #e0ffe0;
+  border-color: #a5d6a7;
+  cursor: not-allowed;
+}
+.suggested-skill-btn.added {
+  background: #e6f7e6;
+  border-color: #4caf50;
+  cursor: not-allowed;
+}
+@media (max-width: 768px) {
+  .skills-container {
+    flex-direction: column;
+  }
+}
+.skills{
+  overflow-y: scroll;
+  height:500px;
+}
+
+
+.occupation-wrapper {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  width: 100%;
+  background: white;
+  border: 1px solid #ccc;
+  z-index: 9999;
+}
+
+.dropdown-item {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: #82c8e9;
 }

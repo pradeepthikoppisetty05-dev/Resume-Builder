@@ -10,6 +10,7 @@ from playwright.sync_api import sync_playwright
 import tempfile
 from flask import send_file
 from io import BytesIO
+from routes.occupation_routes import occupation_bp
 
 import os
 
@@ -40,6 +41,7 @@ def expired_token(jwt_header, jwt_payload):
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(ai_bp)
+app.register_blueprint(occupation_bp)
 
 @app.route("/", methods=["GET"])
 def home():
