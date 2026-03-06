@@ -33,7 +33,7 @@
 .resume-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 25px;
+  gap: 30px;
 }
 
 .resume-card {
@@ -120,7 +120,7 @@
 
 .iframe-container {
   width: 210mm;
-  transform: scale(0.39);
+  transform: scale(0.43);
   transform-origin: top center;
 }
 

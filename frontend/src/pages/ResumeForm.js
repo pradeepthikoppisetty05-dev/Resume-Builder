@@ -190,28 +190,23 @@ function ResumeForm() {
       setSuggestedSkills([]);
       return;
     }
-
     const fetchSkills = async () => {
       try {
-        const res = await fetch(
-          `http://localhost:5000/api/occupations/skills/${skillOnetCode}`
-        );
+        const res = await fetch(`http://localhost:5000/api/occupations/skills/${skillOnetCode}`);
         const data = await res.json();
         setSuggestedSkills(data.map(item => item.technology));
       } catch (err) {
         console.error("Error fetching skills:", err);
       }
     };
-
     fetchSkills();
   }, [skillOnetCode]);
-
 
   useEffect(() => {
     if (!skillJobInput) {
       setSkillOnetCode(formData.personal?.onet_code || null);
     }
-  }, [formData.personal?.onet_code]);
+  }, [formData.personal?.onet_code, skillJobInput]); 
 
   // ── Education ─────────────────────────────────────────────────────────────
   const addEducation = () => {
@@ -292,6 +287,9 @@ function ResumeForm() {
 
       if (field === "description") {
         updated[index].originalDescription = value;
+        if (!updated[index].originalDescription) {
+        updated[index].originalDescription = value;
+      }
       }
 
       if (field === "current" && value === true) {
@@ -398,14 +396,12 @@ function ResumeForm() {
       if (id) {
         api.put(`/resume/${id}`, payload)
           .then(res => {
-            console.log("Auto-saved (updated)");
             setPreviewHTML(res.data.resume_html);
           })
           .catch(err => console.log(err));
       } else {
         api.post("/resume", payload)
           .then(res => {
-            console.log("Auto-saved");
             setId(res.data.resume_id);
             setPreviewHTML(res.data.resume_html);
             navigate(`/resume/${res.data.resume_id}`);
@@ -544,13 +540,22 @@ function ResumeForm() {
         };
         return { ...prev, experience: updated };
       });
-
-      toast.update(toastId, {
-        render: "Experience enhanced!",
-        type: "success",
-        isLoading: false,
-        autoClose: 2000
+   
+      if (!res.data.experience[index]?.description) {
+        toast.update(toastId, {
+          render: "Please provide a description to enhance.",
+          type: "warning",
+          isLoading: false,
+          autoClose: 3000
+        });
+      } else {
+        toast.update(toastId, {
+          render: "Experience enhanced!",
+          type: "success",
+          isLoading: false,
+          autoClose: 2000
       });
+      }
     } catch (err) {
       console.error("Enhance failed:", err);
       toast.update(toastId, {
@@ -561,7 +566,21 @@ function ResumeForm() {
       });
     }
   };
+  
 
+  const handleResetExperience = (index) => {
+    const updatedExperience = [...formData.experience];
+
+    if (updatedExperience[index].originalDescription) {
+      updatedExperience[index].description =
+        updatedExperience[index].originalDescription;
+    }
+
+    setFormData({
+      ...formData,
+      experience: updatedExperience,
+    });
+  };
   // ── Submit ────────────────────────────────────────────────────────────────
   function handleSubmit() {
     if (isFormCompletelyEmpty()) {
@@ -650,10 +669,15 @@ function ResumeForm() {
       .catch(err => console.log(err));
   };
 
-  // ── Skills tab: job search ────────────────────────────────────────────────
   const handleSkillJobChange = async (value) => {
     setSkillJobInput(value);
-    setSkillOnetCode(null);
+
+    if (!value) {
+      setSkillSuggestions([]);
+      setShowSkillDropdown(false);
+      setSkillOnetCode(formData.personal?.onet_code || null);
+      return;
+    }
 
     if (value.length < 2) {
       setSkillSuggestions([]);
@@ -661,13 +685,12 @@ function ResumeForm() {
       return;
     }
 
+    setSkillOnetCode(null); 
     try {
-      const res = await fetch(
-        `http://localhost:5000/api/occupations/search?q=${encodeURIComponent(value)}`
-      );
+      const res = await fetch(`http://localhost:5000/api/occupations/search?q=${encodeURIComponent(value)}`);
       const data = await res.json();
       setSkillSuggestions(data);
-      setShowSkillDropdown(true);
+      setShowSkillDropdown(data.length > 0);
     } catch (err) {
       console.error(err);
     }
@@ -1015,7 +1038,7 @@ function ResumeForm() {
               placeholder="Describe your responsibilities, achievements, and impact..."
               rows="4" maxLength={400}
               style={{ width: "100%" }} name="description"
-              value={exp.description}
+              value={exp.description} 
               onChange={(e) => updateExperience(index, "description", e.target.value)}
             />
 
@@ -1026,10 +1049,22 @@ function ResumeForm() {
               {(exp.description?.length || 0)} / 400
             </div>
 
-            <div>
-              <button type="button" onClick={() => handleEnhance(index)} className="gen-btn">
-                Enhance Experience
-              </button>
+            <div className="enhance-btn"> 
+              {exp.description?.trim() && (
+                <button type="button" onClick={() => handleEnhance(index)} className="gen-btn">
+                  Enhance Experience
+                </button>
+              )}
+              {exp.originalDescription &&
+              exp.description !== exp.originalDescription && (
+                <button
+                  type="button"
+                  onClick={() => handleResetExperience(index)}
+                  className="reset"
+                >
+                  Reset
+                </button>
+              )}
             </div>
             <br />
 
@@ -1049,11 +1084,13 @@ function ResumeForm() {
         <div className="section">
           <div className="form-card">
         <h2>Skills</h2>
-
+      
         <div className="skills-container">
 
         <div className="skills-left">
-
+        <p style={{ fontSize: "0.82rem", color: "#666", marginTop: "-6px", marginBottom: "10px" }}>
+                Please add your most relevant domain-specific skills first, followed by any additional skills.
+              </p>
         {formData.skills.map((skill, index) => (
           <div key={index} style={{ display: "flex", gap: "10px" }}>
             <input
@@ -1073,62 +1110,83 @@ function ResumeForm() {
 
         <div className="skills-right">
 
-          <>
-            <h4>
-              Suggested Skills for {skillJobInput || formData.personal.profession || "your profession"}
-            </h4>
-
-            <div className="occupation-wrapper">
-            <input
-              type="text"
-              placeholder="Enter job title (e.g., System Administrator)"
-              value={skillJobInput}
-              onChange={(e) => handleSkillJobChange(e.target.value)}
-              onBlur={() => setTimeout(() => setShowSkillDropdown(false), 150)}
-              className="skill-search-input"
-            />
-            {showSkillDropdown && skillSuggestions.length > 0 && (
-                <div className="dropdown">
-                  {skillSuggestions.map((occ, index) => (
-                    <div
-                      key={index}
-                      className="dropdown-item"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleSkillSelect(occ)}
-                    >
-                      {occ.title}
-                    </div>
-                  ))}
-                </div>
+          {formData.personal.profession && !skillJobInput ? (
+            <>
+              <h4>Suggested Skills for <em>{formData.personal.profession}</em></h4>
+              <p style={{ fontSize: "0.82rem", color: "#666", marginTop: "-6px", marginBottom: "10px" }}>
+                Based on your profession. Search below to use a different job title.
+              </p>
+              <div className="occupation-wrapper">
+                <input
+                  type="text"
+                  placeholder="Override: search a different job title"
+                  value={skillJobInput}
+                  onChange={(e) => handleSkillJobChange(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowSkillDropdown(false), 150)}
+                  className="skill-search-input"
+                />
+                {showSkillDropdown && skillSuggestions.length > 0 && (
+                  <div className="dropdown">
+                    {skillSuggestions.map((occ, i) => (
+                      <div key={i} className="dropdown-item"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSkillSelect(occ)}>
+                        {occ.title}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <h4>{skillJobInput ? <>Suggested Skills for <em>{skillJobInput}</em></> : "Suggested Skills"}</h4>
+              {!skillJobInput && (
+                <p style={{ fontSize: "0.82rem", color: "#666", marginTop: "-6px", marginBottom: "10px" }}>
+                  No profession selected. Search a job title to get suggestions.
+                </p>
               )}
-            </div>
+              <div className="occupation-wrapper">
+                <input
+                  type="text"
+                  placeholder="Enter job title (e.g., System Administrator)"
+                  value={skillJobInput}
+                  onChange={(e) => handleSkillJobChange(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowSkillDropdown(false), 150)}
+                  className="skill-search-input"
+                />
+                {showSkillDropdown && skillSuggestions.length > 0 && (
+                  <div className="dropdown">
+                    {skillSuggestions.map((occ, i) => (
+                      <div key={i} className="dropdown-item"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSkillSelect(occ)}>
+                        {occ.title}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
-            <div className="skills" style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-              {suggestedSkills.map((skill, index) => {
+          <div className="skills" style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+            {suggestedSkills.map((skill, i) => {
               const alreadyAdded = formData.skills.includes(skill);
-
               return (
-                <button
-                  key={index}
-                  type="button"
+                <button key={i} type="button"
                   className={`suggested-skill-btn ${alreadyAdded ? "added" : ""}`}
                   disabled={alreadyAdded}
                   onClick={() => {
                     if (!alreadyAdded) {
-                      setFormData(prev => ({
-                        ...prev,
-                        skills: [...prev.skills, skill]
-                      }));
-                    }
-                  }}
-                >
-                  {alreadyAdded ? "✓ " : "+ "}
-                  {skill}
+                     setFormData(prev => ({ ...prev, skills: [...prev.skills, skill] }));
+                     }
+                  }}>
+                  {alreadyAdded ? "✓ " : "+ "}{skill}
                 </button>
               );
             })}
-            </div>
-          </>
+          </div>
 
         </div>
 

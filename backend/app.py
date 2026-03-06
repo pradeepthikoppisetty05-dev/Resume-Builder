@@ -11,7 +11,7 @@ import tempfile
 from flask import send_file
 from io import BytesIO
 from routes.occupation_routes import occupation_bp
-
+import copy
 import os
 
 from templates import classic, modern, twocolumn, creative, academic, corporate, ats, bold, minimal, sidebar, timeline, striped, architect, pastel, warm, technical, typographic
@@ -48,13 +48,12 @@ def home():
     return jsonify({"message": "Resume Builder API"})
 
 def preprocess_descriptions(data):
+    data = copy.deepcopy(data)  
     experience = data.get("experience", [])
-
     for exp in experience:
         desc = exp.get("description", "")
         if isinstance(desc, str):
             exp["description"] = desc.replace("\n", "<br>")
-
     return data
 
 def render_html(template_name, data):

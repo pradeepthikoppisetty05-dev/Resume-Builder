@@ -49,10 +49,19 @@ def get_skills_by_onet(onet_code):
             SELECT technology
             FROM technology_skills
             WHERE onet_code = %s AND demand = 'Y'
-          
         """, (onet_code,))
 
         results = cursor.fetchall()
+
+        if len(results) < 10:
+            cursor.execute("""
+                SELECT technology
+                FROM technology_skills
+                WHERE onet_code = %s 
+                AND (demand = 'Y' OR trendy = 'Y')
+            """, (onet_code,))
+            
+            results = cursor.fetchall()
 
         cursor.close()
         conn.close()

@@ -217,7 +217,7 @@ TEMPLATE_MAP = {
 def generate_professional_description(exp):
 
     title = exp.get("title", "Professional")
-    description = exp.get("originalDescription") or exp.get("description", "")
+    description = exp.get("originalDescription", "")
 
     description = preprocess_description(description)
 
@@ -284,17 +284,21 @@ def enhance_experience_batch(experience_list, variation=0):
     enhanced = []
 
     for exp in experience_list:
-        original = exp.get("originalDescription", "")
-        current = exp.get("description", "")
+        original = exp.get("originalDescription")
+    current = exp.get("description", "")
+    title = exp.get("title", "")
 
-        title = exp.get("title", "")
-        if is_already_enhanced(current, title):
-            base_description = original or current
-        else:
-            base_description = current or original
+    if original:
+        base_description = original
+    else:
+        base_description = current
 
-        new_exp = exp.copy()
-        new_exp["originalDescription"] = base_description
+    new_exp = exp.copy()
+
+    if not original:
+        new_exp["originalDescription"] = current
+    else:
+        new_exp["originalDescription"] = original
 
         description, template_index = generate_professional_description(new_exp)
 
