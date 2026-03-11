@@ -22,3 +22,5 @@ import_onet.py
 
 *.xlsx
 /data/*.xlsx
+
+/ai/key.py

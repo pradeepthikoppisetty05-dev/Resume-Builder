@@ -11,8 +11,12 @@ import tempfile
 from flask import send_file
 from io import BytesIO
 from routes.occupation_routes import occupation_bp
+from analytics import analyze_resume, extract_text
+from job_match import semantic_match, get_model
 import copy
-import os
+import os, re
+from transformers import logging
+logging.set_verbosity_error()  # suppress warnings/info logs
 
 from templates import classic, modern, twocolumn, creative, academic, corporate, ats, bold, minimal, sidebar, timeline, striped, architect, pastel, warm, technical, typographic
 
@@ -114,12 +118,14 @@ def create_resume():
     db.session.add(resume)          
     db.session.commit()
 
-    html = render_html(template_name, data)
+    analytics = analyze_resume(resume_data)
+    html = render_html(template_name, resume.resume_data)
 
     return jsonify({
         "message": "Resume created",
         "resume_id": resume.id,
-        "resume_html": html
+        "resume_html": html,
+        "analytics": analytics
     }), 201
 
 @app.route("/api/resumes", methods=["GET"])
@@ -158,9 +164,10 @@ def get_resume(resume_id):
         return jsonify({"error": "Not found"}), 404
 
     data = {**resume.resume_data, "template": resume.template}
+    analytics = analyze_resume(resume.resume_data)
     html = render_html(resume.template, data)
 
-    return jsonify({**data, "resume_html": html}), 200
+    return jsonify({**data, "resume_html": html, "analytics": analytics}), 200
 
 @app.route("/api/resume/<int:resume_id>", methods=["PUT"])
 @jwt_required()
@@ -181,12 +188,15 @@ def update_resume(resume_id):
     resume.resume_data = {k: v for k, v in data.items() if k != "template"}
     resume.template = template_name
 
+    analytics = analyze_resume(resume.resume_data)
+
     html = render_html(template_name, data)
 
     db.session.commit()
 
     return jsonify({"resume_html": html,
                     "id":resume.id,
+                    "analytics": analytics,
                     'template': resume.template}), 200
 
 @app.route("/api/resume/<int:resume_id>", methods=["DELETE"])
@@ -261,6 +271,22 @@ def download_resume(resume_id):
     )
 
 
+@app.route("/api/job-match", methods=["POST"])
+def job_match():
+    model = get_model() 
+    data = request.get_json()
+
+    resume_json = data.get("resume", {})
+    jd_text = data.get("job_description", "")
+
+    if not resume_json or not jd_text:
+        return jsonify({
+            "error": "Could not extract meaningful content from one or both inputs."
+        })
+
+    result = semantic_match(resume_json, jd_text)
+
+    return jsonify(result)
 
 if __name__ == "__main__":
     app.run(debug=True)
